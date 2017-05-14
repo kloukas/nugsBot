@@ -1,8 +1,8 @@
-corpID = 99999999999
-permissions = {'TopRole': 1, 'SecondRole': 2, 'ThirdRole': 3}
-channelID = 'ID'
-discordKey = 'Key'
-
+corpID = 9999
+permissions = {'topRole': 1, 'secondRole': 2, 'thirdRole': 3}
+killChannelID = 'killmail Channel ID'
+capChannelID = 'cap kill channel ID'
+discordKey = 'DISCORD TOKEN'
 systems = [
     'Abrat',
     'Aderkan',

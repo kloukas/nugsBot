@@ -9,8 +9,9 @@ import objectpath as op
 client = discord.Client()
 permissions = config.permissions
 corpID = config.corpID
-channelID = config.channelID
-url = "https://redisq.zkillboard.com/listen.php?ttw=1"
+killChannelID = config.killChannelID
+capChannelID = config.capChannelID
+url = "https://redisq.zkillboard.com/listen.php?ttw=2"
 kmLoop = []
 
 
@@ -41,14 +42,14 @@ async def fetchKM():
                 victimCorp = tree.execute('$.package.killmail.victim.corporation.id is {}'.format(corpID))
                 print("tick")
                 if victimCorp or list(attackers):
-                    print("----------------")
-                    print(bool(victimCorp), bool(list(attackers)))
-                    print("----------------")
+                    # print("----------------")
+                    # print(bool(victimCorp), bool(list(attackers)))
+                    # print("----------------")
                     corpKill = True
 
                 # Alert cap fight
-                if system in ids.systems and shipType['name'] in ids.ships:
-                    print('Gotcha')
+                if system in config.systems and shipType['name'] in config.ships:
+                    print('Gotcha, Cap Fight')
                     zkillUrl = 'https://zkillboard.com/kill/{}/'.format(km['killID'])
                     iconUrl = 'https://image.eveonline.com/Type/{}_32.png'.format(shipType['id'])
                     capEmbed = discord.Embed(title="Cap Fight", url=zkillUrl)
@@ -56,10 +57,15 @@ async def fetchKM():
                     capEmbed.add_field(name="Ship Type", value=shipType['name'])
                     capEmbed.add_field(name="Location", value=system)
                     capEmbed.add_field(name="Time", value=km['killTime'])
-                    await client.send_message(client.get_channel(channelID), embed=capEmbed)
+                    chan = client.get_channel(capChannelID)
+                    await client.send_message(chan, embed=capEmbed)
+                    await client.send_message(
+                        chan,
+                        '@everyone')
 
                 # Post Corp Kill
                 if corpKill:
+                    print('Gotcha, Corp Kill/Loss')
                     zkillUrl = 'https://zkillboard.com/kill/{}/'.format(km['killID'])
                     iconUrl = 'https://image.eveonline.com/Type/{}_32.png'.format(shipType['id'])
                     capEmbed = discord.Embed(title="Corp Kill", url=zkillUrl)
@@ -71,7 +77,7 @@ async def fetchKM():
                     capEmbed.add_field(name="Value", value=formatISK(data['package']['zkb']['totalValue']))
                     capEmbed.add_field(name="Attackers", value=km['attackerCount'])
                     capEmbed.add_field(name="Time", value=km['killTime'])
-                    await client.send_message(client.get_channel(channelID), embed=capEmbed)
+                    await client.send_message(client.get_channel(killChannelID), embed=capEmbed)
 
             # await asyncio.sleep(1.0)
     except asyncio.CancelledError:
@@ -85,6 +91,7 @@ async def on_ready():
     print(client.user.name)
     print(client.user.id)
     print('------')
+    await client.send_message(client.get_channel(killChannelID), 'Bot Online')
 
 
 @client.event
@@ -102,23 +109,21 @@ async def on_message(message):
 
     elif message.content == '!startLoop':
         if permissions[memberRole] <= 2:
-            await client.send_message(message.channel, "Bot closing")
-        if not kmLoop:
-            await client.send_message(message.channel, 'Starting Loop')
-            kmLoop.append(client.loop.create_task(fetchKM()))
-        else:
-            await client.send_message(message.channel, 'Loop already running')
+            if not kmLoop:
+                await client.send_message(message.channel, 'Starting Loop')
+                kmLoop.append(client.loop.create_task(fetchKM()))
+            else:
+                await client.send_message(message.channel, 'Loop already running')
 
     elif message.content == '!stopLoop':
         if permissions[memberRole] <= 2:
-            await client.send_message(message.channel, "Bot closing")
-        if kmLoop:
-            await client.send_message(message.channel, 'Stopping Loop')
-            for loop in kmLoop:
-                loop.cancel()
-            del kmLoop[:]
-        else:
-            await client.send_message(message.channel, 'Loop not running')
+            if kmLoop:
+                await client.send_message(message.channel, 'Stopping Loop')
+                for loop in kmLoop:
+                    loop.cancel()
+                del kmLoop[:]
+            else:
+                await client.send_message(message.channel, 'Loop not running')
 
 
 client.run(config.discordKey)
